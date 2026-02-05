@@ -240,6 +240,16 @@ Clear the entire flag cache.
 - Python 3.9+
 - httpx 0.24+
 
+## CI/CD
+
+This package uses automated CI/CD:
+
+- **CI**: Runs on every push/PR - linting (ruff), type checking (mypy), tests across Python 3.9-3.13
+- **Release**: Tag with `v*` (e.g., `git tag v1.0.0 && git push --tags`) to publish to PyPI
+
+Required repository secrets for releases:
+- `PYPI_TOKEN` - PyPI API token with upload access
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
