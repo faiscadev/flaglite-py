@@ -19,6 +19,11 @@ Example:
     # Sync usage
     if flags.enabled_sync('new-checkout'):
         show_new_checkout()
+
+    # Auth example
+    result = await FlagLite.signup('mypassword123')
+    client = FlagLite(api_key=result.api_key)
+    user = await client.me()
     ```
 """
 
@@ -30,6 +35,13 @@ from .exceptions import (
     NetworkError,
     RateLimitError,
 )
+from .types import (
+    Environment,
+    LoginResponse,
+    Project,
+    SignupResponse,
+    User,
+)
 
 __version__ = "1.0.0"
 
@@ -40,5 +52,10 @@ __all__ = [
     "RateLimitError",
     "NetworkError",
     "ConfigurationError",
+    "User",
+    "SignupResponse",
+    "LoginResponse",
+    "Project",
+    "Environment",
     "__version__",
 ]

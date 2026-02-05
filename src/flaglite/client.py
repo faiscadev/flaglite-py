@@ -18,6 +18,7 @@ from .exceptions import (
     NetworkError,
     RateLimitError,
 )
+from .types import LoginResponse, SignupResponse, User
 
 logger = logging.getLogger("flaglite")
 
@@ -49,12 +50,202 @@ class FlagLite:
         # Sync usage
         if flags.enabled_sync('new-checkout'):
             show_new_checkout()
+
+        # Auth example
+        result = await FlagLite.signup('mypassword123')
+        client = FlagLite(api_key=result.api_key)
         ```
     """
+
+    @staticmethod
+    async def signup(
+        password: str,
+        username: Optional[str] = None,
+        base_url: Optional[str] = None,
+    ) -> SignupResponse:
+        """Sign up a new user.
+
+        This is a static method - no client instance required.
+
+        Args:
+            password: Password for the new account.
+            username: Optional username (auto-generated if not provided).
+            base_url: Optional API base URL override.
+
+        Returns:
+            SignupResponse with user, api_key, token, project, and environments.
+
+        Raises:
+            AuthenticationError: If signup fails.
+            NetworkError: If a network error occurs.
+
+        Example:
+            ```python
+            result = await FlagLite.signup('mypassword123')
+            print(f"Signed up as {result.user.username}")
+            print(f"API Key: {result.api_key}")
+            ```
+        """
+        url = (base_url or DEFAULT_BASE_URL).rstrip("/") + "/auth/signup"
+        payload = {"password": password}
+        if username:
+            payload["username"] = username
+
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+            try:
+                response = await client.post(url, json=payload)
+            except httpx.TimeoutException as e:
+                raise NetworkError(f"Request timed out: {e}") from e
+            except httpx.NetworkError as e:
+                raise NetworkError(f"Network error: {e}") from e
+            except httpx.HTTPError as e:
+                raise NetworkError(f"HTTP error: {e}") from e
+
+            if response.status_code != 200:
+                try:
+                    error_data = response.json()
+                    message = error_data.get("message", f"Signup failed: {response.status_code}")
+                except Exception:
+                    message = f"Signup failed: {response.status_code}"
+                raise AuthenticationError(message, status_code=response.status_code)
+
+            return SignupResponse.from_dict(response.json())
+
+    @staticmethod
+    def signup_sync(
+        password: str,
+        username: Optional[str] = None,
+        base_url: Optional[str] = None,
+    ) -> SignupResponse:
+        """Synchronous version of signup().
+
+        Args:
+            password: Password for the new account.
+            username: Optional username (auto-generated if not provided).
+            base_url: Optional API base URL override.
+
+        Returns:
+            SignupResponse with user, api_key, token, project, and environments.
+        """
+        url = (base_url or DEFAULT_BASE_URL).rstrip("/") + "/auth/signup"
+        payload = {"password": password}
+        if username:
+            payload["username"] = username
+
+        with httpx.Client(timeout=DEFAULT_TIMEOUT) as client:
+            try:
+                response = client.post(url, json=payload)
+            except httpx.TimeoutException as e:
+                raise NetworkError(f"Request timed out: {e}") from e
+            except httpx.NetworkError as e:
+                raise NetworkError(f"Network error: {e}") from e
+            except httpx.HTTPError as e:
+                raise NetworkError(f"HTTP error: {e}") from e
+
+            if response.status_code != 200:
+                try:
+                    error_data = response.json()
+                    message = error_data.get("message", f"Signup failed: {response.status_code}")
+                except Exception:
+                    message = f"Signup failed: {response.status_code}"
+                raise AuthenticationError(message, status_code=response.status_code)
+
+            return SignupResponse.from_dict(response.json())
+
+    @staticmethod
+    async def login(
+        username: str,
+        password: str,
+        base_url: Optional[str] = None,
+    ) -> LoginResponse:
+        """Log in an existing user.
+
+        This is a static method - no client instance required.
+
+        Args:
+            username: The username.
+            password: The password.
+            base_url: Optional API base URL override.
+
+        Returns:
+            LoginResponse with user and token.
+
+        Raises:
+            AuthenticationError: If login fails.
+            NetworkError: If a network error occurs.
+
+        Example:
+            ```python
+            result = await FlagLite.login('myuser', 'mypassword')
+            client = FlagLite(token=result.token)
+            ```
+        """
+        url = (base_url or DEFAULT_BASE_URL).rstrip("/") + "/auth/login"
+        payload = {"username": username, "password": password}
+
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+            try:
+                response = await client.post(url, json=payload)
+            except httpx.TimeoutException as e:
+                raise NetworkError(f"Request timed out: {e}") from e
+            except httpx.NetworkError as e:
+                raise NetworkError(f"Network error: {e}") from e
+            except httpx.HTTPError as e:
+                raise NetworkError(f"HTTP error: {e}") from e
+
+            if response.status_code != 200:
+                try:
+                    error_data = response.json()
+                    message = error_data.get("message", f"Login failed: {response.status_code}")
+                except Exception:
+                    message = f"Login failed: {response.status_code}"
+                raise AuthenticationError(message, status_code=response.status_code)
+
+            return LoginResponse.from_dict(response.json())
+
+    @staticmethod
+    def login_sync(
+        username: str,
+        password: str,
+        base_url: Optional[str] = None,
+    ) -> LoginResponse:
+        """Synchronous version of login().
+
+        Args:
+            username: The username.
+            password: The password.
+            base_url: Optional API base URL override.
+
+        Returns:
+            LoginResponse with user and token.
+        """
+        url = (base_url or DEFAULT_BASE_URL).rstrip("/") + "/auth/login"
+        payload = {"username": username, "password": password}
+
+        with httpx.Client(timeout=DEFAULT_TIMEOUT) as client:
+            try:
+                response = client.post(url, json=payload)
+            except httpx.TimeoutException as e:
+                raise NetworkError(f"Request timed out: {e}") from e
+            except httpx.NetworkError as e:
+                raise NetworkError(f"Network error: {e}") from e
+            except httpx.HTTPError as e:
+                raise NetworkError(f"HTTP error: {e}") from e
+
+            if response.status_code != 200:
+                try:
+                    error_data = response.json()
+                    message = error_data.get("message", f"Login failed: {response.status_code}")
+                except Exception:
+                    message = f"Login failed: {response.status_code}"
+                raise AuthenticationError(message, status_code=response.status_code)
+
+            return LoginResponse.from_dict(response.json())
 
     def __init__(
         self,
         api_key: Optional[str] = None,
+        token: Optional[str] = None,
         base_url: Optional[str] = None,
         cache_ttl: float = DEFAULT_CACHE_TTL,
         timeout: float = DEFAULT_TIMEOUT,
@@ -63,8 +254,10 @@ class FlagLite:
         """Initialize the FlagLite client.
 
         Args:
-            api_key: FlagLite environment API key. If not provided, reads from
-                FLAGLITE_API_KEY environment variable.
+            api_key: FlagLite environment API key (e.g., flg_xxx). If not provided,
+                reads from FLAGLITE_API_KEY environment variable.
+            token: JWT token from login/signup. If not provided, reads from
+                FLAGLITE_TOKEN environment variable.
             base_url: API base URL. Defaults to https://api.flaglite.dev/v1.
                 Can also be set via FLAGLITE_BASE_URL env var.
             cache_ttl: Cache time-to-live in seconds. Default 30 seconds.
@@ -73,13 +266,16 @@ class FlagLite:
             disable_cache: If True, disable caching entirely.
 
         Raises:
-            ConfigurationError: If no API key is provided or found in environment.
+            ConfigurationError: If no API key or token is provided or found in environment.
         """
-        # Resolve API key
+        # Resolve API key or token
         self._api_key = api_key or os.environ.get("FLAGLITE_API_KEY")
-        if not self._api_key:
+        self._token = token or os.environ.get("FLAGLITE_TOKEN")
+        
+        if not self._api_key and not self._token:
             raise ConfigurationError(
-                "API key required. Pass api_key parameter or set FLAGLITE_API_KEY environment variable."
+                "API key or token required. Pass api_key/token parameter or set "
+                "FLAGLITE_API_KEY/FLAGLITE_TOKEN environment variable."
             )
 
         # Resolve base URL
@@ -106,13 +302,108 @@ class FlagLite:
         """Return the cache TTL in seconds, or 0 if caching is disabled."""
         return self._cache.ttl if self._cache else 0.0
 
+    def _get_auth_token(self) -> str:
+        """Return the authentication token (API key preferred over JWT token)."""
+        return self._api_key or self._token or ""
+
     def _get_headers(self) -> dict[str, str]:
         """Return headers for API requests."""
         return {
-            "Authorization": f"Bearer {self._api_key}",
+            "Authorization": f"Bearer {self._get_auth_token()}",
             "Content-Type": "application/json",
             "User-Agent": "flaglite-python/1.0.0",
         }
+
+    async def me(self) -> User:
+        """Get the current authenticated user information.
+
+        Returns:
+            User object with id, username, email, and created_at.
+
+        Raises:
+            AuthenticationError: If not authenticated or token is invalid.
+            NetworkError: If a network error occurs.
+
+        Example:
+            ```python
+            client = FlagLite(api_key='flg_xxx')
+            user = await client.me()
+            print(f"Logged in as {user.username}")
+            ```
+        """
+        client = self._get_async_client()
+        url = "auth/me"
+
+        try:
+            response = await client.get(url)
+        except httpx.TimeoutException as e:
+            raise NetworkError(f"Request timed out: {e}") from e
+        except httpx.NetworkError as e:
+            raise NetworkError(f"Network error: {e}") from e
+        except httpx.HTTPError as e:
+            raise NetworkError(f"HTTP error: {e}") from e
+
+        if response.status_code == 200:
+            data = response.json()
+            return User(
+                id=data["id"],
+                username=data["username"],
+                email=data.get("email"),
+                created_at=data.get("created_at"),
+            )
+
+        if response.status_code == 401:
+            raise AuthenticationError(
+                "Invalid API key or token", status_code=response.status_code
+            )
+
+        try:
+            error_data = response.json()
+            message = error_data.get("message", f"Failed to get user: {response.status_code}")
+        except Exception:
+            message = f"Failed to get user: {response.status_code}"
+
+        raise FlagLiteError(message, status_code=response.status_code)
+
+    def me_sync(self) -> User:
+        """Synchronous version of me().
+
+        Returns:
+            User object with id, username, email, and created_at.
+        """
+        client = self._get_sync_client()
+        url = "auth/me"
+
+        try:
+            response = client.get(url)
+        except httpx.TimeoutException as e:
+            raise NetworkError(f"Request timed out: {e}") from e
+        except httpx.NetworkError as e:
+            raise NetworkError(f"Network error: {e}") from e
+        except httpx.HTTPError as e:
+            raise NetworkError(f"HTTP error: {e}") from e
+
+        if response.status_code == 200:
+            data = response.json()
+            return User(
+                id=data["id"],
+                username=data["username"],
+                email=data.get("email"),
+                created_at=data.get("created_at"),
+            )
+
+        if response.status_code == 401:
+            raise AuthenticationError(
+                "Invalid API key or token", status_code=response.status_code
+            )
+
+        try:
+            error_data = response.json()
+            message = error_data.get("message", f"Failed to get user: {response.status_code}")
+        except Exception:
+            message = f"Failed to get user: {response.status_code}"
+
+        raise FlagLiteError(message, status_code=response.status_code)
 
     def _get_async_client(self) -> httpx.AsyncClient:
         """Get or create the async HTTP client."""
